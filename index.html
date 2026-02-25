@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Circle</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            background-color: #2d2d2d;
+            width: 100%;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 600;
+            background: linear-gradient(45deg, #004d40, #00c853);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            white-space: nowrap;
+            overflow: hidden;
+            animation: typing 10s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+            width: fit-content;
+        }
+
+        .content {
+            flex: 1;
+            width: 100%;
+            max-width: 1200px;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .profile-card {
+            background: #2d2d2d;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .profile-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .profile-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin-bottom: 1rem;
+            border: 3px solid #00c853;
+        }
+
+        .profile-name {
+            font-size: 1.2rem;
+            margin: 0.5rem 0;
+            color: #ffffff;
+        }
+
+        .profile-status {
+            font-size: 0.9rem;
+            color: #00c853;
+            margin: 0;
+        }
+
+        .trust-score {
+            margin: 1rem 0;
+            padding: 0.5rem;
+            background: rgba(0, 200, 83, 0.1);
+            border-radius: 10px;
+        }
+
+        .trust-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00c853;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .rank-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #00c853;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 30px 15px rgba(0, 200, 83, 0.3);
+                transform: scale(1.03);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0);
+                transform: scale(1);
+            }
+        }
+
+        .advice-button {
+            background: linear-gradient(45deg, #004d40, #00c853);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+            animation: pulse 1.5s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .advice-button:hover {
+            transform: scale(1.05);
+            background: linear-gradient(45deg, #00c853, #004d40);
+            box-shadow: 0 5px 25px rgba(0, 200, 83, 0.6);
+            animation: none;
+        }
+
+        .advice-button:active {
+            transform: scale(0.95);
+        }
+
+        .advice-button::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(45deg);
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+
+        .advice-button:hover::before {
+            opacity: 1;
+            transform: rotate(45deg) translate(50%, 50%);
+        }
+
+        .most-trusted {
+            border: 2px solid #00c853;
+            background: linear-gradient(145deg, #2d2d2d, #1a1a1a);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes spin-reverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        @keyframes pulse-size {
+            0%, 100% { 
+                transform: scale(1) rotate(0deg); 
+            }
+            50% { 
+                transform: scale(1.1) rotate(180deg);
+            }
+            100% { 
+                transform: scale(1) rotate(360deg);
+            }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 
+                    0 0 20px rgba(0, 200, 83, 0.4),
+                    0 0 40px rgba(0, 200, 83, 0.2),
+                    0 0 60px rgba(0, 200, 83, 0.1);
+            }
+            50% {
+                box-shadow: 
+                    0 0 30px rgba(0, 200, 83, 0.6),
+                    0 0 60px rgba(0, 200, 83, 0.3),
+                    0 0 90px rgba(0, 200, 83, 0.2);
+            }
+        }
+
+        .spinning-circle {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                #004d40 0%,
+                #004d40 66%,
+                rgba(255, 255, 255, 0.9) 66%,
+                rgba(255, 255, 255, 0.9) 100%
+            );
+            padding: 3px;
+            animation: 
+                pulse-size 4s ease-in-out infinite,
+                pulse-glow 4s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px rgba(0, 200, 83, 0.5));
+        }
+
+        .spinning-circle::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            right: 3px;
+            bottom: 3px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            z-index: 1;
+        }
+
+        .spinning-circle::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                #00c853 0%,
+                #00c853 33%,
+                rgba(255, 255, 255, 0.9) 33%,
+                rgba(255, 255, 255, 0.9) 66%,
+                #00c853 66%,
+                #00c853 100%
+            );
+            animation: spin-reverse 3s linear infinite;
+            z-index: 2;
+            box-shadow: 
+                inset 0 0 15px rgba(0, 200, 83, 0.8),
+                0 0 15px rgba(0, 200, 83, 0.6);
+        }
+
+        @keyframes glow {
+            0%, 100% { 
+                filter: drop-shadow(0 0 15px rgba(0, 200, 83, 0.7));
+            }
+            50% { 
+                filter: drop-shadow(0 0 30px rgba(0, 200, 83, 0.9));
+            }
+        }
+
+        @keyframes typing {
+            0% { width: 0; opacity: 0; }
+            5% { width: 0; opacity: 1; }
+            25% { width: 100%; opacity: 1; }
+            85% { width: 100%; opacity: 1; }
+            95% { width: 0; opacity: 1; }
+            100% { width: 0; opacity: 0; }
+        }
+
+        .header-content {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .typing-container {
+            display: inline-block;
+            width: fit-content;
+            opacity: 1;
+            margin-right: 50px;
+        }
+
+        .spinning-circle-container {
+            position: absolute;
+            right: calc(50% - 150px);
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="typing-container">
+                <h1>My Circle</h1>
+            </div>
+            <div class="spinning-circle-container">
+                <div class="spinning-circle"></div>
+            </div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="profile-grid">
+            <div class="profile-card most-trusted">
+                <div class="rank-badge">#1</div>
+                <img src="https://i.pravatar.cc/150?img=1" alt="Alex Thompson" class="profile-image">
+                <h3 class="profile-name">Alex Thompson</h3>
+                <p class="profile-status">Online</p>
+                <div class="trust-score">
+                    Trust Score: <span class="trust-value">98%</span>
+                </div>
+                <div class="stats">
+                    <div>
+                        <div>Interactions</div>
+                        <strong>847</strong>
+                    </div>
+                    <div>
+                        <div>Known For</div>
+                        <strong>3 years</strong>
+                    </div>
+                </div>
+                <button class="advice-button">Ask for Advice</button>
+            </div>
+            <div class="profile-card">
+                <div class="rank-badge">#2</div>
+                <img src="https://i.pravatar.cc/150?img=32" alt="Sarah Chen" class="profile-image">
+                <h3 class="profile-name">Sarah Chen</h3>
+                <p class="profile-status">Online</p>
+                <div class="trust-score">
+                    Trust Score: <span class="trust-value">87%</span>
+                </div>
+                <div class="stats">
+                    <div>
+                        <div>Interactions</div>
+                        <strong>723</strong>
+                    </div>
+                    <div>
+                        <div>Known For</div>
+                        <strong>2 years</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-card">
+                <div class="rank-badge">#3</div>
+                <img src="https://i.pravatar.cc/150?img=3" alt="Marcus Rodriguez" class="profile-image">
+                <h3 class="profile-name">Marcus Rodriguez</h3>
+                <p class="profile-status">Away</p>
+                <div class="trust-score">
+                    Trust Score: <span class="trust-value">79%</span>
+                </div>
+                <div class="stats">
+                    <div>
+                        <div>Interactions</div>
+                        <strong>654</strong>
+                    </div>
+                    <div>
+                        <div>Known For</div>
+                        <strong>2 years</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-card">
+                <div class="rank-badge">#4</div>
+                <img src="https://i.pravatar.cc/150?img=23" alt="Emma Wilson" class="profile-image">
+                <h3 class="profile-name">Emma Wilson</h3>
+                <p class="profile-status">Online</p>
+                <div class="trust-score">
+                    Trust Score: <span class="trust-value">72%</span>
+                </div>
+                <div class="stats">
+                    <div>
+                        <div>Interactions</div>
+                        <strong>589</strong>
+                    </div>
+                    <div>
+                        <div>Known For</div>
+                        <strong>1.5 years</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-card">
+                <div class="rank-badge">#5</div>
+                <img src="https://i.pravatar.cc/150?img=15" alt="James Lee" class="profile-image">
+                <h3 class="profile-name">James Lee</h3>
+                <p class="profile-status">Offline</p>
+                <div class="trust-score">
+                    Trust Score: <span class="trust-value">65%</span>
+                </div>
+                <div class="stats">
+                    <div>
+                        <div>Interactions</div>
+                        <strong>432</strong>
+                    </div>
+                    <div>
+                        <div>Known For</div>
+                        <strong>1 year</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-card">
+                <div class="rank-badge">#6</div>
+                <img src="https://i.pravatar.cc/150?img=6" alt="Sofia Patel" class="profile-image">
+                <h3 class="profile-name">Sofia Patel</h3>
+                <p class="profile-status">Online</p>
+                <div class="trust-score">
+                    Trust Score: <span class="trust-value">58%</span>
+                </div>
+                <div class="stats">
+                    <div>
+                        <div>Interactions</div>
+                        <strong>378</strong>
+                    </div>
+                    <div>
+                        <div>Known For</div>
+                        <strong>1 year</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-card">
+                <div class="rank-badge">#7</div>
+                <img src="https://i.pravatar.cc/150?img=7" alt="David Kim" class="profile-image">
+                <h3 class="profile-name">David Kim</h3>
+                <p class="profile-status">Away</p>
+                <div class="trust-score">
+                    Trust Score: <span class="trust-value">52%</span>
+                </div>
+                <div class="stats">
+                    <div>
+                        <div>Interactions</div>
+                        <strong>298</strong>
+                    </div>
+                    <div>
+                        <div>Known For</div>
+                        <strong>8 months</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-card">
+                <div class="rank-badge">#8</div>
+                <img src="https://i.pravatar.cc/150?img=8" alt="Maya Johnson" class="profile-image">
+                <h3 class="profile-name">Maya Johnson</h3>
+                <p class="profile-status">Online</p>
+                <div class="trust-score">
+                    Trust Score: <span class="trust-value">48%</span>
+                </div>
+                <div class="stats">
+                    <div>
+                        <div>Interactions</div>
+                        <strong>245</strong>
+                    </div>
+                    <div>
+                        <div>Known For</div>
+                        <strong>6 months</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
