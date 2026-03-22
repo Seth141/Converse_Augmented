@@ -1,0 +1,15 @@
+diff --git a/node_modules/@augmentos/sdk/dist/tpa/session/index.js b/node_modules/@augmentos/sdk/dist/tpa/session/index.js
+index 2a76d88..3460bd7 100644
+--- a/node_modules/@augmentos/sdk/dist/tpa/session/index.js
++++ b/node_modules/@augmentos/sdk/dist/tpa/session/index.js
+@@ -731,6 +731,10 @@ class TpaSession {
+                 this.handleBinaryMessage(message);
+                 return;
+             }
++            // Device snapshots from cloud (battery, model, connectivity). Must not hit the "unrecognized" branch.
++            if (message.type === 'device_state_update') {
++                return;
++            }
+             // Using type guards to determine message type and safely handle each case
+             try {
+                 if ((0, types_1.isTpaConnectionAck)(message)) {

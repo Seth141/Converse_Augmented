@@ -2,6 +2,7 @@
 import { config } from 'dotenv';
 import { TpaServer, TpaSession } from '@augmentos/sdk';
 import { MentraAssistant } from './MentraAssistant';
+import { showHudText } from './hudDisplay';
 import { serve } from "bun";
 import { file } from "bun";
 
@@ -26,85 +27,113 @@ if (!OPENAI_API_KEY) {
 }
 
 class MyAugmentOSApp extends TpaServer {
-    private assistant: MentraAssistant;
-
     constructor(config: { packageName: string; apiKey: string; port: number }) {
         super(config);
-        this.assistant = new MentraAssistant();
         console.log('MyAugmentOSApp initialized with package:', config.packageName);
     }
 
+    /**
+     * AugmentOS waits for this handler to finish before responding 200 to the session webhook.
+     * Never block forever here — the cloud will time out, retry, and spawn duplicate sessions.
+     */
     protected async onSession(session: TpaSession, sessionId: string, userId: string): Promise<void> {
+        const assistant = new MentraAssistant();
+
         try {
             console.log('\n=== Session Started ===');
             console.log(`Session ID: ${sessionId}`);
             console.log(`User ID: ${userId}`);
             console.log('======================\n');
 
-            // Set up voice command handling with enhanced debugging
             console.log('\n=== Setting up Voice Transcription ===');
             console.log('Initializing transcription handler...');
-            
-            try {
-                // Set up transcription event handler
-                session.events.onTranscription(async (data) => {
-                    console.log('\n=== Transcription Event Received ===');
-                    console.log('Raw transcription data:', data);
-                    
-                    if (data.text) {
-                        console.log('Transcribed text:', data.text);
-                        console.log('Is final:', data.isFinal);
-                        
-                        if (data.isFinal) {
-                            console.log('Processing final transcription');
-                            try {
-                                await this.assistant.handleVoiceCommand(session, data.text);
-                                console.log('Voice command processed successfully');
-                            } catch (error) {
-                                console.error('Error processing voice command:', error);
-                            }
+
+            // Track how much of a streaming utterance we already processed at a sentence boundary.
+            let lastUtteranceId: string | null = null;
+            let processedUpTo: number = 0;
+
+            session.events.onTranscription(async (data) => {
+                if (!data.text) return;
+
+                const rawData = data as unknown as { utteranceId?: string };
+                const uttId = typeof rawData.utteranceId === 'string' ? rawData.utteranceId : null;
+
+                // Reset tracker when a new utterance starts.
+                if (uttId && uttId !== lastUtteranceId) {
+                    lastUtteranceId = uttId;
+                    processedUpTo = 0;
+                }
+
+                if (data.isFinal) {
+                    // On isFinal, process any remaining text after the last sentence boundary we handled.
+                    const remaining = data.text.slice(processedUpTo).trim();
+                    processedUpTo = 0;
+                    lastUtteranceId = null;
+
+                    if (remaining.length > 0) {
+                        console.log('Processing final remainder:', remaining);
+                        try {
+                            await assistant.handleVoiceCommand(session, remaining, { utteranceId: uttId ?? undefined });
+                        } catch (error) {
+                            console.error('Error processing voice command:', error);
                         }
-                    } else {
-                        console.log('No text in transcription data');
                     }
+                    return;
+                }
+
+                // Interim: look for sentence-ending punctuation in the new portion of text.
+                const newText = data.text.slice(processedUpTo);
+                const sentenceEnd = /[.?!]/g;
+                let lastMatch: RegExpExecArray | null = null;
+                let m: RegExpExecArray | null;
+                while ((m = sentenceEnd.exec(newText)) !== null) {
+                    lastMatch = m;
+                }
+
+                if (lastMatch) {
+                    const cutIndex = processedUpTo + lastMatch.index + 1;
+                    const sentence = data.text.slice(processedUpTo, cutIndex).trim();
+                    processedUpTo = cutIndex;
+
+                    if (sentence.length > 0) {
+                        console.log('Processing sentence boundary:', sentence);
+                        try {
+                            await assistant.handleVoiceCommand(session, sentence, { utteranceId: uttId ? `${uttId}_s${cutIndex}` : undefined });
+                        } catch (error) {
+                            console.error('Error processing voice command:', error);
+                        }
+                    }
+                }
+            });
+
+            console.log('Transcription handler setup complete');
+            console.log('Voice commands are now active');
+            console.log('Insight generator is actively listening');
+            console.log('=====================================\n');
+
+            assistant.startSilenceDetection(session);
+
+            session.events.onError((error) => {
+                console.error('Session error:', {
+                    error: error,
+                    sessionId: sessionId,
+                    userId: userId,
+                    timestamp: new Date().toISOString(),
                 });
+            });
 
-                console.log('Transcription handler setup complete');
-                console.log('Voice commands are now active');
-                console.log('Insight generator is actively listening');
-                console.log('=====================================\n');
+            session.events.onDisconnected(() => {
+                console.log(`Session ${sessionId} disconnected at ${new Date().toISOString()}`);
+                assistant.stopSilenceDetection();
+            });
 
-                // Start silence detection
-                this.assistant.startSilenceDetection(session);
-
-                // Display welcome message
-                await session.layouts.showTextWall("I'll provide fascinating facts and unique perspectives about your conversations every 5 seconds.");
-
-                // Set up error handling with more detail
-                session.events.onError((error) => {
-                    console.error('Session error:', {
-                        error: error,
-                        sessionId: sessionId,
-                        userId: userId,
-                        timestamp: new Date().toISOString()
-                    });
-                });
-
-                session.events.onDisconnected(() => {
-                    console.log(`Session ${sessionId} disconnected at ${new Date().toISOString()}`);
-                    this.assistant.stopSilenceDetection();
-                });
-
-                // Keep the session alive
-                await new Promise(() => {}); // This keeps the session open
-
-            } catch (error) {
-                console.error('Failed to setup transcription handler:', error);
-                throw error;
-            }
-
+            await showHudText(
+                session,
+                'Converse is ready on two lines\nTen second pause between cards now'
+            );
         } catch (error) {
-            console.error('Session error:', error);
+            console.error('Failed to setup session:', error);
+            assistant.stopSilenceDetection();
             throw error;
         }
     }
@@ -120,7 +149,7 @@ const server = new MyAugmentOSApp({
 // Start the web server
 const webServer = serve({
     port: WEB_PORT,
-    async fetch(req) {
+    async fetch(req: Request) {
         const url = new URL(req.url);
         if (url.pathname === "/") {
             return new Response(file("index.html"));
