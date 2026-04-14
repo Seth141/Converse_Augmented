@@ -129,7 +129,7 @@ class MyAugmentOSApp extends TpaServer {
 
             await showHudText(
                 session,
-                'Converse is ready on two lines\nTen second pause between cards now'
+                "Your AI assistant for augmented conversations\nI'll listen in and enhance your knowledge base in real time."
             );
         } catch (error) {
             console.error('Failed to setup session:', error);
